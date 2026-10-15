@@ -1,0 +1,57 @@
+import { test, expect } from '@playwright/test';
+
+test('two tabs chat, synchronize questions, reject third, restore, and clear',async({context,page})=>{
+  await page.goto('/?demo=1');
+  await page.getByLabel('怎么称呼你？').fill('小满');
+  await page.getByRole('button',{name:'创建小房间'}).click();
+  await expect(page.getByText('你们的小房间',{exact:true})).toBeVisible();
+  const invite=page.url();
+  const partner=await context.newPage();
+  await partner.goto(invite);
+  await partner.getByLabel('怎么称呼你？').fill('木木');
+  await partner.getByRole('button',{name:'加入小房间'}).click();
+  await expect(page.locator('.member-count')).toHaveText('2/2');
+  await page.getByRole('textbox',{name:'聊天内容'}).fill('你好呀，今天想一起散步。');
+  await page.getByRole('button',{name:'发送消息'}).click();
+  await expect(partner.getByText('你好呀，今天想一起散步。',{exact:true})).toBeVisible();
+  await partner.getByRole('textbox',{name:'聊天内容'}).fill('好呀！我们去看日落。');
+  await partner.getByRole('textbox',{name:'聊天内容'}).press('Enter');
+  await expect(page.getByText('好呀！我们去看日落。',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'认真一点'}).click();
+  await expect(partner.getByRole('button',{name:'认真一点'})).toHaveAttribute('aria-pressed','true');
+  await expect(partner.locator('.question-card h2')).toHaveText(await page.locator('.question-card h2').innerText());
+  const before=await page.locator('.question-card h2').innerText();
+  await partner.getByRole('button',{name:'换个问题'}).click();
+  await expect(page.locator('.question-card h2')).not.toHaveText(before);
+  await page.reload();
+  await expect(page.getByText('好呀！我们去看日落。',{exact:true})).toBeVisible();
+  const third=await context.newPage();
+  await third.goto(invite);
+  await third.getByLabel('怎么称呼你？').fill('第三个人');
+  await third.getByRole('button',{name:'加入小房间'}).click();
+  await expect(third.getByRole('alert')).toContainText('已经有两个人');
+  await page.screenshot({path:'test-results/room-desktop.png',fullPage:true});
+  await partner.setViewportSize({width:390,height:844});
+  await expect(partner.getByRole('button',{name:'发送消息'})).toBeVisible();
+  expect(await partner.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await partner.screenshot({path:'test-results/room-mobile.png',fullPage:true});
+  await partner.getByRole('button',{name:'结束这次聊天'}).click();
+  await partner.getByRole('button',{name:'结束并清空'}).click();
+  await expect(page.getByText('房间已结束，聊天消息已清空。')).toBeVisible();
+  const messages=await page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('closer-demo:')).flatMap(k=>JSON.parse(localStorage[k]).messages));
+  expect(messages).toHaveLength(0);
+  await expect(page.getByText('你好呀，今天想一起散步。',{exact:true})).toHaveCount(0);
+});
+
+test('landing is responsive, and unconfigured app makes demo explicit',async({page})=>{
+  await page.goto('/');
+  await expect(page.getByRole('button',{name:'创建小房间'})).toBeDisabled();
+  await expect(page.getByText('正式聊天还需连接 Supabase。')).toBeVisible();
+  await page.screenshot({path:'test-results/home-desktop.png',fullPage:true});
+  await page.setViewportSize({width:390,height:844});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.screenshot({path:'test-results/home-mobile.png',fullPage:true});
+  await page.getByRole('button',{name:'先体验一下'}).click();
+  await expect(page.getByRole('button',{name:'创建小房间'})).toBeEnabled();
+  await expect(page.locator('.demo-banner')).toContainText('不支持异地聊天');
+});

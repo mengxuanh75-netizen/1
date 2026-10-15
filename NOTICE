@@ -1,0 +1,13 @@
+靠近一点 / A Little Closer
+
+The Supabase message insertion, initial message loading and real-time subscription
+patterns in src/backend.js are adapted from:
+https://github.com/shwosner/realtime-chat-supabase-react
+Author: Shimon Wosner
+Source commit: 2c0a5002fc1e9b7c8cb6fa6e30fbbc1d6fa100c7
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Modifications: private two-person rooms, anonymous identity, room-scoped queries,
+reconnection refresh, synchronized question cards, expiration and room closure.
+The interface and Chinese questions were newly written for this project.
+No content from the 36 Questions translation or Valentine's Day Quiz is included.
